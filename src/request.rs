@@ -26,33 +26,48 @@ impl Request {
         let mut buf = [0u8; 1024];
         let mut buf_len = 0;
 
-        let mut parser = RequestLineParser::new();
-        while !parser.done() {
-            let n = reader.read(&mut buf[buf_len..]).unwrap();
-            buf_len += n;
+        let n = reader.read(&mut buf[buf_len..]).unwrap();
+        buf_len += n;
 
+        let mut parser = RequestLineParser::new();
+        loop {
             let consumed = parser.parse(&buf[..buf_len])?;
             buf.copy_within(consumed..buf_len, 0);
             buf_len -= consumed;
+
+            if parser.done() {
+                break;
+            }
+
+            // read more
+            let n = reader.read(&mut buf[buf_len..]).unwrap();
+            buf_len += n;
         }
+
         let request_line = parser.inner();
 
         let mut parser = HeadersParser::new();
-        while !parser.done() {
-            let n = reader.read(&mut buf[buf_len..]).unwrap();
-            buf_len += n;
-
+        loop {
             let consumed = parser.parse(&buf[..buf_len])?;
             buf.copy_within(consumed..buf_len, 0);
             buf_len -= consumed;
+
+            if parser.done() {
+                break;
+            }
+
+            // read more
+            let n = reader.read(&mut buf[buf_len..]).unwrap();
+            buf_len += n;
         }
 
         let headers = parser.inner_headers();
 
         // parse body
-        let body_length: usize = headers.get("Content-Length").unwrap().parse().unwrap();
-
-        dbg!(body_length);
+        let body_length: usize = headers
+            .get("Content-Length")
+            .map(|s| s.parse().unwrap())
+            .unwrap_or(0);
 
         while buf_len < body_length {
             let n = reader.read(&mut buf[buf_len..]).unwrap();
