@@ -23,6 +23,7 @@ pub struct Request {
 
 impl Request {
     pub fn from_reader(reader: &mut impl Read) -> Result<Self, Error> {
+        // TODO: break up this function
         let mut buf = [0u8; 1024];
         let mut buf_len = 0;
 
@@ -66,7 +67,7 @@ impl Request {
         // parse body
         let body_length: usize = headers
             .get("Content-Length")
-            .map(|s| s.parse().unwrap())
+            .map(|s| s.parse().expect("Failed to parse Content-Length value"))
             .unwrap_or(0);
 
         while buf_len < body_length {
