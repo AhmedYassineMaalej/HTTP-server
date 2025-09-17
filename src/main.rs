@@ -5,13 +5,16 @@ mod request_line;
 mod response;
 mod server;
 
-use crate::server::Server;
+use crate::server::{HandlerError, Server};
 
 fn main() {
-    let mut server = Server::new(8080);
+    let server = Server::new(8080);
 
-    server.serve(|writer, _request| {
-        writer.write("Hello World\n".as_bytes()).unwrap();
-        Ok(())
+    server.serve(|writer, request| {
+        dbg!(request);
+        match writer.write("hello world".as_bytes()) {
+            Ok(_) => Ok(()),
+            Err(_) => Err(HandlerError::BadRequest),
+        }
     });
 }

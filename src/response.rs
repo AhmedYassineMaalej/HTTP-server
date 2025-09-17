@@ -17,7 +17,7 @@ pub fn write_status_line(writer: &mut impl Write, status_code: StatusCode) {
 
     let status_line = format!("HTTP/1.1 {status_code_message}\r\n");
 
-    writer.write(status_line.as_bytes());
+    writer.write(status_line.as_bytes()).unwrap();
 }
 
 pub fn get_default_headers(content_length: usize) -> Headers {
@@ -32,7 +32,7 @@ pub fn get_default_headers(content_length: usize) -> Headers {
 
 pub fn write_headers(writer: &mut impl Write, headers: Headers) {
     for (key, val) in headers.iter() {
-        write!(writer, "{key}: {val}\r\n");
+        write!(writer, "{key}: {val}\r\n").unwrap();
     }
-    write!(writer, "\r\n");
+    write!(writer, "\r\n").unwrap();
 }

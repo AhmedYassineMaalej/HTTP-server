@@ -168,7 +168,7 @@ impl HeadersParser {
 mod tests {
     use super::Headers;
     use crate::chunk_reader::ChunkReader;
-    use crate::request::Error;
+    use crate::request::{Error, RequestParser};
 
     #[test]
     fn test_valid_single_header() {
@@ -193,7 +193,10 @@ mod tests {
     fn test_missing_column() {
         // invalid spacing
         let data = ChunkReader::new("Host   localhost\r\n\r\n", 8);
-        let headers = Headers::from_reader(data);
+
+        let mut parser = RequestParser::new(data);
+        let headers = parser.parse_headers();
+
         assert!(headers.is_err());
         assert_eq!(headers.unwrap_err(), Error::MissingFieldLineColumn);
     }
@@ -201,7 +204,9 @@ mod tests {
     #[test]
     fn test_multiple() {
         let data = ChunkReader::new("Host: localhost:42069\r\nName: Maalej\r\n\r\n", 5);
-        let headers = Headers::from_reader(data);
+
+        let mut parser = RequestParser::new(data);
+        let headers = parser.parse_headers();
 
         assert!(headers.is_ok());
         let headers = headers.unwrap();
@@ -213,7 +218,9 @@ mod tests {
     #[test]
     fn test_invalid_characters() {
         let data = ChunkReader::new("H©st: localhost:42069\r\n\r\n", 5);
-        let headers = Headers::from_reader(data);
+
+        let mut parser = RequestParser::new(data);
+        let headers = parser.parse_headers();
 
         assert!(headers.is_err())
     }
@@ -225,7 +232,8 @@ mod tests {
             6,
         );
 
-        let headers = Headers::from_reader(data);
+        let mut parser = RequestParser::new(data);
+        let headers = parser.parse_headers();
 
         assert!(headers.is_ok());
         let headers = headers.unwrap();
