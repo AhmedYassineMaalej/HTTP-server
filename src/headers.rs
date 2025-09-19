@@ -57,6 +57,16 @@ impl Headers {
     pub fn iter(&self) -> Iter<'_, String, String> {
         self.inner.iter()
     }
+
+    pub fn get_default(content_length: usize) -> Headers {
+        let mut headers = Self::new();
+
+        headers.insert(String::from("Content-Length"), content_length.to_string());
+        headers.insert(String::from("Connection"), String::from("close"));
+        headers.insert(String::from("Content-Type"), String::from("text/plain"));
+
+        headers
+    }
 }
 
 pub struct HeadersParser {
@@ -168,16 +178,24 @@ impl HeadersParser {
 mod tests {
     use super::Headers;
     use crate::chunk_reader::ChunkReader;
+    use crate::headers::HeadersParser;
     use crate::request::{Error, RequestParser};
 
     #[test]
     fn test_valid_single_header() {
-        let data = ChunkReader::new("Host: localhost:42069\r\n\r\n", 8);
-        let headers = Headers::from_reader(data);
-
-        assert!(headers.is_ok());
-        let headers = headers.unwrap();
+        let data = "Host: localhost:42069\r\n\r\n".as_bytes();
+        let mut parser = HeadersParser::new();
+        assert_eq!(parser.parse(data), Ok(27));
+        let headers = parser.inner_headers();
         assert_eq!(headers.get("Host"), Some(&String::from("localhost:42069")));
+    }
+
+    #[test]
+    fn test_incomplete_header() {
+        let data = "Host: localhost:42069\r".as_bytes();
+        let mut parser = HeadersParser::new();
+        assert_eq!(parser.parse(data), Ok(0));
+        assert!(!parser.done());
     }
 
     #[test]

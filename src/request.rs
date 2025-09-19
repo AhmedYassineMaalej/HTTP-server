@@ -8,6 +8,16 @@ use crate::{
 pub const SEPARATOR: &[u8; 2] = b"\r\n";
 
 #[derive(Debug, PartialEq)]
+pub enum Error {
+    MalformedRequestLine,
+    UnsupportedHTTPVersion,
+    InvalidFieldLineSpacing,
+    MissingFieldLineColumn,
+    InvalidTokenCharacter,
+    BodyShorterThanReported,
+}
+
+#[derive(Debug, PartialEq)]
 pub enum ParserState {
     Init,
     Waiting,
@@ -116,16 +126,6 @@ impl<R: Read> RequestParser<R> {
 
         Ok(self.buf[..body_len].to_vec())
     }
-}
-
-#[derive(Debug, PartialEq)]
-pub enum Error {
-    MalformedRequestLine,
-    UnsupportedHTTPVersion,
-    InvalidFieldLineSpacing,
-    MissingFieldLineColumn,
-    InvalidTokenCharacter,
-    BodyShorterThanReported,
 }
 
 #[cfg(test)]

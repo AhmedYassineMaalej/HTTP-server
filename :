@@ -5,27 +5,16 @@ use std::{
 
 use crate::{
     request::Request,
-    response::{StatusCode, write_error_response, write_ok_response},
+    response::{StatusCode, get_default_headers, write_headers, write_status_line},
 };
 
 #[derive(Debug)]
 pub enum HandlerError {
     BadRequest,
-    IntervalServerError,
 }
 impl HandlerError {
-    pub fn as_str(&self) -> &str {
-        match self {
-            HandlerError::BadRequest => "Bad Request",
-            HandlerError::IntervalServerError => "Internal Server Error",
-        }
-    }
-
-    pub fn code(&self) -> StatusCode {
-        match self {
-            HandlerError::BadRequest => StatusCode::BadRequest,
-            HandlerError::IntervalServerError => StatusCode::InternalServerError,
-        }
+    fn as_str(&self) -> &str {
+        "Internal server error"
     }
 }
 
@@ -55,21 +44,42 @@ impl Server {
         handler: fn(&mut dyn Write, Request) -> Result<(), HandlerError>,
     ) {
         let mut stream_reader = BufReader::new(&stream);
+        let mut stream_writer = BufWriter::new(&mut stream);
         let request = Request::from_reader(&mut stream_reader).unwrap();
         println!("received request");
 
         let mut body_buf = Vec::<u8>::with_capacity(1024);
+
         let handle_result = {
             let mut body_writer = BufWriter::new(&mut body_buf);
             handler(&mut body_writer, request)
         };
 
-        let mut stream_writer = BufWriter::new(&mut stream);
         match handle_result {
-            Ok(_) => write_ok_response(&mut stream_writer, body_buf),
-            Err(e) => write_error_response(&mut stream_writer, e),
+            Ok(_) => Server::write_ok_response(&mut stream_writer, body_buf),
+            Err(e) => Server::write_error_response(&mut stream_writer, e),
         };
 
         println!("response sent");
+    }
+
+    fn write_ok_response(mut stream_writer: &mut BufWriter<&mut TcpStream>, body: Vec<u8>) {
+        println!("request handled successfully");
+
+        write_status_line(&mut stream_writer, StatusCode::Ok);
+        write_headers(&mut stream_writer, get_default_headers(body.len()));
+        stream_writer.write(&body).unwrap();
+    }
+
+    fn write_error_response(
+        mut stream_writer: &mut BufWriter<&mut TcpStream>,
+        error: HandlerError,
+    ) {
+        println!("failed to handle request: {error:?}");
+
+        write_status_line(&mut stream_writer, StatusCode::BadRequest);
+        let error_string = error.as_str();
+        write_headers(&mut stream_writer, get_default_headers(error_string.len()));
+        stream_writer.write(error_string.as_bytes()).unwrap();
     }
 }
