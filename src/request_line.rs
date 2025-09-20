@@ -80,14 +80,8 @@ impl RequestLineParser {
         self.state = ParserState::Init;
         let mut read = 0;
 
-        loop {
-            match self.state {
-                ParserState::Init => {
-                    read += self.parse_request_line(&data[read..])?;
-                }
-
-                ParserState::Done | ParserState::Waiting => break,
-            }
+        while self.state == ParserState::Init {
+            read += self.parse_request_line(&data[read..])?;
         }
 
         Ok(read)
@@ -141,6 +135,6 @@ mod tests {
             2,
         ));
 
-        assert!(err.is_err())
+        assert!(err.is_err());
     }
 }

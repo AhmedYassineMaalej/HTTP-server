@@ -12,7 +12,7 @@ impl ChunkReader {
     pub fn new(data: &str, chunk_size: usize) -> Self {
         Self {
             data: String::from(data),
-            chunk_size: chunk_size,
+            chunk_size,
             pos: 0,
         }
     }

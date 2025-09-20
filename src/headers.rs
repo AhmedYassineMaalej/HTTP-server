@@ -21,7 +21,7 @@ impl Headers {
         }
     }
 
-    pub fn insert(&mut self, key: String, value: String) {
+    pub fn insert(&mut self, key: &str, value: String) {
         let key = key.to_lowercase();
 
         self.inner
@@ -61,9 +61,9 @@ impl Headers {
     pub fn get_default(content_length: usize) -> Headers {
         let mut headers = Self::new();
 
-        headers.insert(String::from("Content-Length"), content_length.to_string());
-        headers.insert(String::from("Connection"), String::from("close"));
-        headers.insert(String::from("Content-Type"), String::from("text/plain"));
+        headers.insert("Content-Length", content_length.to_string());
+        headers.insert("Connection", String::from("close"));
+        headers.insert("Content-Type", String::from("text/plain"));
 
         headers
     }
@@ -86,13 +86,8 @@ impl HeadersParser {
         self.state = ParserState::Init;
         let mut read = 0;
 
-        loop {
-            match self.state {
-                ParserState::Init => {
-                    read += self.parse_header(&data[read..])?;
-                }
-                ParserState::Done | ParserState::Waiting => break,
-            }
+        while self.state == ParserState::Init {
+            read += self.parse_header(&data[read..])?;
         }
 
         Ok(read)
@@ -121,18 +116,18 @@ impl HeadersParser {
 
         let (key, value) = (&line[..colon_idx], &line[colon_idx + 1..]);
 
-        if key.ends_with(&[b' ']) {
+        if key.ends_with(b" ") {
             return Err(Error::InvalidFieldLineSpacing);
         }
 
-        if !Self::valid_header_key(key) {
+        if !Self::valid_key(key) {
             return Err(Error::InvalidTokenCharacter);
         }
 
         let key = String::from_utf8_lossy(key.trim_ascii()).into_owned();
         let value = String::from_utf8_lossy(value.trim_ascii()).into_owned();
 
-        self.headers.insert(key, value);
+        self.headers.insert(&key, value);
 
         Ok(read)
     }
@@ -145,32 +140,19 @@ impl HeadersParser {
         self.state == ParserState::Done
     }
 
-    fn valid_header_key(key: &[u8]) -> bool {
+    fn valid_key_char(char: u8) -> bool {
+        char.is_ascii_lowercase()
+            || char.is_ascii_uppercase()
+            || char.is_ascii_digit()
+            || VALID_SYMBOLS.contains(&char)
+    }
+
+    fn valid_key(key: &[u8]) -> bool {
         if key.is_empty() {
             return false;
         }
 
-        for char in key {
-            if (b'a'..=b'z').contains(&char) {
-                continue;
-            }
-
-            if (b'A'..=b'Z').contains(&char) {
-                continue;
-            }
-
-            if (b'0'..=b'9').contains(&char) {
-                continue;
-            }
-
-            if VALID_SYMBOLS.contains(&char) {
-                continue;
-            }
-
-            return false;
-        }
-
-        true
+        key.iter().all(|&char| Self::valid_key_char(char))
     }
 }
 
@@ -230,7 +212,7 @@ mod tests {
         let headers = headers.unwrap();
         assert_eq!(headers.get("Host"), Some(&String::from("localhost:42069")));
         assert_eq!(headers.get("Name"), Some(&String::from("Maalej")));
-        assert!(headers.get("NonExistantKey").is_none())
+        assert!(headers.get("NonExistantKey").is_none());
     }
 
     #[test]
@@ -240,7 +222,7 @@ mod tests {
         let mut parser = RequestParser::new(data);
         let headers = parser.parse_headers();
 
-        assert!(headers.is_err())
+        assert!(headers.is_err());
     }
 
     #[test]

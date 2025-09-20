@@ -1,5 +1,5 @@
 use std::{
-    io::{BufReader, BufWriter, Write},
+    io::{self, BufReader, BufWriter, Write},
     net::{TcpListener, TcpStream},
 };
 
@@ -34,10 +34,10 @@ pub struct Server {
 }
 
 impl Server {
-    pub fn new(port: u16) -> Self {
-        Self {
-            listener: TcpListener::bind(("127.0.0.1", port)).unwrap(),
-        }
+    pub fn new(port: u16) -> Result<Self, io::Error> {
+        Ok(Self {
+            listener: TcpListener::bind(("127.0.0.1", port))?,
+        })
     }
 
     pub fn serve(&self, handler: fn(&mut dyn Write, Request) -> Result<(), HandlerError>) {
@@ -45,12 +45,11 @@ impl Server {
             let stream = stream.unwrap();
             println!("connection established");
 
-            self.handle(stream, handler);
+            Self::handle(stream, handler);
         }
     }
 
     fn handle(
-        &self,
         mut stream: TcpStream,
         handler: fn(&mut dyn Write, Request) -> Result<(), HandlerError>,
     ) {
@@ -66,9 +65,9 @@ impl Server {
 
         let mut stream_writer = BufWriter::new(&mut stream);
         match handle_result {
-            Ok(_) => write_ok_response(&mut stream_writer, body_buf),
-            Err(e) => write_error_response(&mut stream_writer, e),
-        };
+            Ok(()) => write_ok_response(&mut stream_writer, &body_buf),
+            Err(e) => write_error_response(&mut stream_writer, &e),
+        }
 
         println!("response sent");
     }

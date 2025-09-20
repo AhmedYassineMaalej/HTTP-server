@@ -24,6 +24,7 @@ pub enum ParserState {
     Done,
 }
 
+#[allow(clippy::struct_field_names)]
 #[derive(Debug)]
 pub struct Request {
     pub request_line: RequestLine,
@@ -58,8 +59,8 @@ impl<R: Read> RequestParser<R> {
         let headers = self.parse_headers()?;
         let body_len = headers
             .get("Content-Length")
-            .map(|s| s.parse().unwrap())
-            .unwrap_or(0);
+            .map_or(0, |s| s.parse().unwrap());
+
         let body = self.parse_body(body_len)?;
         Ok(Request {
             request_line,
@@ -164,6 +165,6 @@ pub mod tests {
         let request = Request::from_reader(&mut data);
         assert!(request.is_err());
         let error = request.unwrap_err();
-        assert_eq!(error, Error::BodyShorterThanReported)
+        assert_eq!(error, Error::BodyShorterThanReported);
     }
 }

@@ -8,7 +8,10 @@ mod server;
 use crate::server::{HandlerError, Server};
 
 fn main() {
-    let server = Server::new(8080);
+    let Ok(server) = Server::new(8080) else {
+        println!("couldnt not create server at port");
+        return;
+    };
 
     server.serve(|writer, request| {
         let target = request.request_line.request_target;
@@ -21,8 +24,8 @@ fn main() {
             return Err(HandlerError::IntervalServerError);
         }
 
-        match writer.write("hello world".as_bytes()) {
-            Ok(_) => Ok(()),
+        match writer.write_all("hello world".as_bytes()) {
+            Ok(()) => Ok(()),
             Err(_e) => Err(HandlerError::BadRequest),
         }
     });
