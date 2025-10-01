@@ -15,7 +15,6 @@ fn main() {
 
     server.serve(|writer, request| {
         let target = request.request_line.request_target;
-
         if target == r"/yourproblem" {
             return Err(HandlerError::IntervalServerError);
         }
