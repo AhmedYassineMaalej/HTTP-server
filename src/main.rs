@@ -13,6 +13,7 @@ fn main() {
         return;
     };
 
+    // TODO: change writer from &mut dyn Write to ReponseWriter
     server.serve(|writer, request| {
         let target = request.request_line.request_target;
         if target == r"/yourproblem" {
@@ -24,7 +25,7 @@ fn main() {
         }
 
         match writer.write_all("hello world".as_bytes()) {
-            Ok(()) => Ok(()),
+            Ok(()) => todo!(),
             Err(_e) => Err(HandlerError::BadRequest),
         }
     });

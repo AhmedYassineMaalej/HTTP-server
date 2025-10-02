@@ -5,14 +5,17 @@ use std::{
 
 use crate::{
     request::Request,
-    response::{StatusCode, write_error_response, write_ok_response},
+    response::{Response, ResponseBuilder, StatusCode},
 };
+
+pub type RequestHandler = fn(&mut dyn Write, Request) -> Result<Response, HandlerError>;
 
 #[derive(Debug)]
 pub enum HandlerError {
     BadRequest,
     IntervalServerError,
 }
+
 impl HandlerError {
     pub fn as_str(&self) -> &str {
         match self {
@@ -40,7 +43,7 @@ impl Server {
         })
     }
 
-    pub fn serve(&self, handler: fn(&mut dyn Write, Request) -> Result<(), HandlerError>) {
+    pub fn serve(&self, handler: RequestHandler) {
         for stream in self.listener.incoming() {
             let stream = stream.unwrap();
             println!("connection established");
@@ -49,10 +52,7 @@ impl Server {
         }
     }
 
-    fn handle(
-        mut stream: TcpStream,
-        handler: fn(&mut dyn Write, Request) -> Result<(), HandlerError>,
-    ) {
+    fn handle(mut stream: TcpStream, handler: RequestHandler) {
         let mut stream_reader = BufReader::new(&stream);
         let request = Request::from_reader(&mut stream_reader).unwrap();
         println!("received request");
@@ -64,9 +64,13 @@ impl Server {
         };
 
         let mut stream_writer = BufWriter::new(&mut stream);
+
         match handle_result {
-            Ok(()) => write_ok_response(&mut stream_writer, &body_buf),
-            Err(e) => write_error_response(&mut stream_writer, &e),
+            Ok(response) => response.write_to(&mut stream_writer),
+            Err(handle_err) => {
+                let response = ResponseBuilder::from_code(handle_err.code()).build();
+                response.write_to(&mut stream_writer);
+            }
         }
 
         println!("response sent");
