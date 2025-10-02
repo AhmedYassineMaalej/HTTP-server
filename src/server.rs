@@ -1,14 +1,14 @@
 use std::{
-    io::{self, BufReader, BufWriter, Write},
+    io::{self, BufReader, BufWriter},
     net::{TcpListener, TcpStream},
 };
 
 use crate::{
     request::Request,
-    response::{Response, ResponseBuilder, StatusCode},
+    response::{ResponseWriter, StatusCode},
 };
 
-pub type RequestHandler = fn(&mut dyn Write, Request) -> Result<Response, HandlerError>;
+pub type RequestHandler = fn(&mut ResponseWriter, Request) -> Result<(), HandlerError>;
 
 #[derive(Debug)]
 pub enum HandlerError {
@@ -57,21 +57,10 @@ impl Server {
         let request = Request::from_reader(&mut stream_reader).unwrap();
         println!("received request");
 
-        let mut body_buf = Vec::<u8>::with_capacity(1024);
-        let handle_result = {
-            let mut body_writer = BufWriter::new(&mut body_buf);
-            handler(&mut body_writer, request)
-        };
+        let stream_writer = BufWriter::new(&mut stream);
+        let mut response_writer = ResponseWriter::new(stream_writer);
 
-        let mut stream_writer = BufWriter::new(&mut stream);
-
-        match handle_result {
-            Ok(response) => response.write_to(&mut stream_writer),
-            Err(handle_err) => {
-                let response = ResponseBuilder::from_code(handle_err.code()).build();
-                response.write_to(&mut stream_writer);
-            }
-        }
+        handler(&mut response_writer, request).unwrap();
 
         println!("response sent");
     }
