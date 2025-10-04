@@ -1,16 +1,8 @@
-mod chunk_reader;
-mod headers;
-mod request;
-mod request_line;
-mod response;
-mod server;
-
-use crate::request::Request;
-use crate::response::ResponseWriter;
-use crate::server::{HandlerError, Server};
-use crate::{
+use http_server::{
     headers::Headers,
-    response::{StatusCode, StatusLine},
+    request::Request,
+    response::{ResponseWriter, StatusCode, StatusLine},
+    server::{HandlerError, Server},
 };
 
 fn main() {

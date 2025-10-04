@@ -2,5 +2,15 @@
 name = "http-server"
 version = "0.1.0"
 edition = "2024"
+authors = ["AYM <ahmedyessinemaalej@gmail.com>"]
+
+[lib]
+name = "http_server"
+path = "src/lib.rs"
+
+[[bin]]
+name = "http_server_bin"
+path = "src/bin.rs"
 
 [dependencies]
+
