@@ -168,7 +168,7 @@ mod tests {
     fn test_valid_single_header() {
         let data = "Host: localhost:42069\r\n\r\n".as_bytes();
         let mut parser = HeadersParser::new();
-        assert_eq!(parser.parse(data), Ok(27));
+        assert_eq!(parser.parse(data), Ok(25));
         let headers = parser.inner_headers();
         assert_eq!(headers.get("Host"), Some(&String::from("localhost:42069")));
     }
