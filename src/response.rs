@@ -50,9 +50,18 @@ enum ResponseWriterState {
 pub struct ResponseWriter<'a> {
     inner: BufWriter<&'a mut TcpStream>,
     state: ResponseWriterState,
+    body_write_done: bool,
 }
 
 impl<'a> ResponseWriter<'a> {
+    pub fn new(writer: BufWriter<&'a mut TcpStream>) -> Self {
+        Self {
+            inner: writer,
+            state: ResponseWriterState::Init,
+            body_write_done: false,
+        }
+    }
+
     pub fn write_status_line(&mut self, status_line: &StatusLine) {
         if self.state != ResponseWriterState::Init {
             todo!()
@@ -83,10 +92,25 @@ impl<'a> ResponseWriter<'a> {
         self.state = ResponseWriterState::Body;
     }
 
-    pub fn new(writer: BufWriter<&'a mut TcpStream>) -> Self {
-        Self {
-            inner: writer,
-            state: ResponseWriterState::Init,
+    pub fn write_chunked_body(&mut self, body: &[u8]) {
+        let mut start = 0;
+        let chunk_size = 1024;
+        while start < body.len() {
+            let chunk_range = start..(start + chunk_size).min(body.len());
+            start = chunk_range.end;
+            let chunk = &body[chunk_range];
+            self.inner
+                .write_all(format!("{:X}", chunk.len()).as_bytes())
+                .unwrap();
+            self.inner.write_all(b"\r\n").unwrap();
+            self.inner.write_all(chunk).unwrap();
+            self.inner.write_all(b"\r\n").unwrap();
         }
+        self.inner.write_all(b"0\r\n\r\n").unwrap();
+        self.body_write_done = true;
+    }
+
+    pub fn write_chunked_body_done(&self) -> bool {
+        self.body_write_done
     }
 }

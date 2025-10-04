@@ -5,7 +5,9 @@ mod request_line;
 mod response;
 mod server;
 
-use crate::server::Server;
+use crate::request::Request;
+use crate::response::ResponseWriter;
+use crate::server::{HandlerError, Server};
 use crate::{
     headers::Headers,
     response::{StatusCode, StatusLine},
@@ -17,11 +19,12 @@ fn main() {
         return;
     };
 
-    server.serve(|writer, _request| {
-        writer.write_status_line(&StatusLine::from(StatusCode::Ok));
-        writer.write_headers(&Headers::get_default(23));
-        writer.write_body("Welcome to burger king\n".as_bytes());
+    server.serve(handler);
+}
 
-        Ok(())
-    });
+fn handler(writer: &mut ResponseWriter, request: Request) -> Result<(), HandlerError> {
+    writer.write_status_line(&StatusLine::from(StatusCode::Ok));
+    writer.write_headers(&Headers::get_default(0));
+    writer.write_chunked_body(b"Hello world");
+    Ok(())
 }

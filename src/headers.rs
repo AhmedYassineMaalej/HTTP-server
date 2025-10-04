@@ -61,8 +61,9 @@ impl Headers {
     pub fn get_default(content_length: usize) -> Headers {
         let mut headers = Self::new();
 
-        headers.insert("Content-Length", content_length.to_string());
-        headers.insert("Connection", String::from("close"));
+        // headers.insert("Content-Length", content_length.to_string());
+        headers.insert("Transfer-Encoding", String::from("chunked"));
+        // headers.insert("Connection", String::from("close"));
         headers.insert("Content-Type", String::from("text/plain"));
 
         headers
