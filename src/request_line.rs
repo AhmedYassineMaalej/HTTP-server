@@ -1,6 +1,6 @@
 use crate::request::{ParseError, ParserState, SEPARATOR};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct RequestLine {
     pub http_version: String,
     pub request_target: String,
