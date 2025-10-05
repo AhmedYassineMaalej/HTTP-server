@@ -214,14 +214,15 @@ mod tests {
     #[test]
     fn test_multiple_value_header() {
         let data = "Key: Value1\r\n\
-            Key: Value2\r\n\r\n"
+            Key: Value2\r\n\
+            Key: Value3\r\n\r\n"
             .as_bytes();
 
         let mut parser = HeadersParser::new();
         assert_eq!(parser.parse(data), Ok(data.len()));
 
         let mut headers = Headers::new();
-        headers.insert("Key", String::from("Value1, Value2"));
+        headers.insert("Key", String::from("Value1, Value2, Value3"));
 
         assert_eq!(headers, parser.inner_headers());
     }
