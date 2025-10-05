@@ -192,4 +192,30 @@ pub mod tests {
         let request = Request::from_reader(&mut data);
         assert_eq!(request, Err(ParseError::BodyShorterThanReported));
     }
+
+    #[test]
+    fn test_no_content_length() {
+        let mut data = ChunkReader::new(
+            "POST /submit HTTP/1.1\r\n\
+            Host: localhost:42069\r\n\
+            \r\n\
+            hello world!\n",
+            3,
+        );
+        let request = Request::from_reader(&mut data);
+        let mut headers = Headers::new();
+        headers.insert("Host", String::from("localhost:42069"));
+        assert_eq!(
+            request.unwrap(),
+            Request {
+                request_line: RequestLine {
+                    http_version: String::from("1.1"),
+                    request_target: String::from("/submit"),
+                    method: String::from("POST"),
+                },
+                headers,
+                body: Vec::new(),
+            },
+        );
+    }
 }
