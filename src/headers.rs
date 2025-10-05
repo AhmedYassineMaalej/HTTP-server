@@ -6,7 +6,7 @@ const VALID_SYMBOLS: [u8; 15] = [
     b'!', b'#', b'$', b'%', b'&', b'\'', b'*', b'+', b'-', b'.', b'^', b'_', b'`', b'|', b'~',
 ];
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq)]
 pub struct Headers {
     inner: HashMap<String, String>,
 }
@@ -161,15 +161,20 @@ impl HeadersParser {
 
 #[cfg(test)]
 mod tests {
-    use crate::headers::HeadersParser;
+    use crate::{
+        headers::{Headers, HeadersParser},
+        request::ParseError,
+    };
 
     #[test]
     fn test_valid_single_header() {
         let data = "Host: localhost:42069\r\n\r\n".as_bytes();
         let mut parser = HeadersParser::new();
-        assert_eq!(parser.parse(data), Ok(25));
-        let headers = parser.inner_headers();
-        assert_eq!(headers.get("Host"), Some(&String::from("localhost:42069")));
+        assert_eq!(parser.parse(data), Ok(data.len()));
+        let mut headers = Headers::new();
+        headers.insert("Host", String::from("localhost:42069"));
+
+        assert_eq!(headers, parser.inner_headers());
     }
 
     #[test]
@@ -178,5 +183,46 @@ mod tests {
         let mut parser = HeadersParser::new();
         assert_eq!(parser.parse(data), Ok(0));
         assert!(!parser.done());
+    }
+
+    #[test]
+    fn test_invalid_header_spacing() {
+        let data = "Host :localhost:42069\r\n\r\n".as_bytes();
+        let mut parser = HeadersParser::new();
+        assert_eq!(parser.parse(data), Err(ParseError::InvalidFieldLineSpacing));
+        assert!(!parser.done());
+    }
+
+    #[test]
+    fn test_multiple_headers() {
+        let data = "Host: localhost:42069\r\n\
+            Content-Type: plain/text\r\n\
+            Content-Length: 40\r\n\r\n"
+            .as_bytes();
+
+        let mut parser = HeadersParser::new();
+        assert_eq!(parser.parse(data), Ok(data.len()));
+
+        let mut headers = Headers::new();
+        headers.insert("Host", String::from("localhost:42069"));
+        headers.insert("Content-Type", String::from("plain/text"));
+        headers.insert("Content-Length", String::from("40"));
+
+        assert_eq!(headers, parser.inner_headers());
+    }
+
+    #[test]
+    fn test_multiple_value_header() {
+        let data = "Key: Value1\r\n\
+            Key: Value2\r\n\r\n"
+            .as_bytes();
+
+        let mut parser = HeadersParser::new();
+        assert_eq!(parser.parse(data), Ok(data.len()));
+
+        let mut headers = Headers::new();
+        headers.insert("Key", String::from("Value1, Value2"));
+
+        assert_eq!(headers, parser.inner_headers());
     }
 }
