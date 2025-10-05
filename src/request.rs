@@ -28,7 +28,7 @@ pub enum ParserState {
 }
 
 #[allow(clippy::struct_field_names)]
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Request {
     pub request_line: RequestLine,
     pub headers: Headers,
@@ -145,10 +145,10 @@ impl<R: Read> RequestParser<R> {
 #[cfg(test)]
 pub mod tests {
     use super::{ParseError, Request};
-    use crate::chunk_reader::ChunkReader;
+    use crate::{chunk_reader::ChunkReader, headers::Headers, request_line::RequestLine};
 
     #[test]
-    fn test_standard() {
+    fn test_standard_request() {
         let mut data = ChunkReader::new(
             "POST /submit HTTP/1.1\r\n\
             Host: localhost:42069\r\n\
@@ -160,8 +160,22 @@ pub mod tests {
 
         let request = Request::from_reader(&mut data);
         assert!(request.is_ok());
-        let request = request.unwrap();
-        assert_eq!(request.body, "hello world!\n".as_bytes());
+
+        let mut headers = Headers::new();
+        headers.insert("Host", String::from("localhost:42069"));
+        headers.insert("Content-Length", String::from("13"));
+        assert_eq!(
+            request.unwrap(),
+            Request {
+                request_line: RequestLine {
+                    http_version: String::from("1.1"),
+                    request_target: String::from("/submit"),
+                    method: String::from("POST"),
+                },
+                headers,
+                body: "hello world!\n".as_bytes().to_vec(),
+            },
+        );
     }
 
     #[test]
@@ -176,8 +190,6 @@ pub mod tests {
         );
 
         let request = Request::from_reader(&mut data);
-        assert!(request.is_err());
-        let error = request.unwrap_err();
-        assert_eq!(error, ParseError::BodyShorterThanReported);
+        assert_eq!(request, Err(ParseError::BodyShorterThanReported));
     }
 }
