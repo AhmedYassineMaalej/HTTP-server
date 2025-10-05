@@ -17,6 +17,7 @@ pub enum HandlerError {
 }
 
 impl HandlerError {
+    #[must_use]
     pub fn as_str(&self) -> &str {
         match self {
             HandlerError::BadRequest => "Bad Request",
@@ -24,6 +25,7 @@ impl HandlerError {
         }
     }
 
+    #[must_use]
     pub fn code(&self) -> StatusCode {
         match self {
             HandlerError::BadRequest => StatusCode::BadRequest,
@@ -37,19 +39,35 @@ pub struct Server {
 }
 
 impl Server {
+    /// Create a new `Server` that listens on `127.0.0.1:{port}`
+    ///
+    /// # Errors
+    ///
+    /// will return an error if the underlying `TcpListener::bind` fails
+    /// see <https://doc.rust-lang.org/std/net/struct.TcpListener.html#method.bind>
     pub fn new(port: u16) -> Result<Self, io::Error> {
         Ok(Self {
             listener: TcpListener::bind(("127.0.0.1", port))?,
         })
     }
 
-    pub fn serve(&self, handler: RequestHandler) {
+    /// Serve incoming streams according to the passed `RequestHandler`
+    ///
+    /// This function will never return `Ok(())` as it runs indefinitely unless it encounters an
+    /// error
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying `TcpListener::incoming` fails
+    pub fn serve(&self, handler: RequestHandler) -> Result<(), io::Error> {
         for stream in self.listener.incoming() {
-            let stream = stream.unwrap();
+            let stream = stream?;
             println!("connection established");
 
             Self::handle(stream, handler);
         }
+
+        Ok(())
     }
 
     fn handle(mut stream: TcpStream, handler: RequestHandler) {

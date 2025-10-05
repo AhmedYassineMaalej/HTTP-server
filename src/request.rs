@@ -8,17 +8,20 @@ use crate::{
 pub const SEPARATOR: &[u8; 2] = b"\r\n";
 
 #[derive(Debug, PartialEq)]
-pub enum Error {
+pub enum ParseError {
     MalformedRequestLine,
     UnsupportedHTTPVersion,
     InvalidFieldLineSpacing,
     MissingFieldLineColumn,
     InvalidTokenCharacter,
     BodyShorterThanReported,
+    InvalidHeaderValue,
+    IoError,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
 pub enum ParserState {
+    #[default]
     Init,
     Waiting,
     Done,
@@ -33,7 +36,12 @@ pub struct Request {
 }
 
 impl Request {
-    pub fn from_reader(reader: &mut impl Read) -> Result<Self, Error> {
+    /// Reads and parses data from reader into `Request` struct
+    ///
+    /// # Errors
+    ///
+    /// This function will return a `ParseError` if the underlying parser fails
+    pub fn from_reader(reader: &mut impl Read) -> Result<Self, ParseError> {
         let mut parser = RequestParser::new(reader);
         parser.parse_request()
     }
@@ -54,12 +62,17 @@ impl<R: Read> RequestParser<R> {
         }
     }
 
-    pub fn parse_request(&mut self) -> Result<Request, Error> {
+    /// Parses the internal buffer into a request
+    ///
+    /// # Errors
+    /// This function will return `Err(Error)` if it encounters an error while parsing
+    pub fn parse_request(&mut self) -> Result<Request, ParseError> {
         let request_line = self.parse_request_line()?;
         let headers = self.parse_headers()?;
-        let body_len = headers
-            .get("Content-Length")
-            .map_or(0, |s| s.parse().unwrap());
+        let body_len = match headers.get("Content-Length") {
+            Some(len) => len.parse().map_err(|_| ParseError::InvalidHeaderValue)?,
+            None => 0,
+        };
 
         let body = self.parse_body(body_len)?;
         Ok(Request {
@@ -80,7 +93,7 @@ impl<R: Read> RequestParser<R> {
         self.buf_len -= consumed;
     }
 
-    fn parse_request_line(&mut self) -> Result<RequestLine, Error> {
+    fn parse_request_line(&mut self) -> Result<RequestLine, ParseError> {
         let mut parser = RequestLineParser::new();
         loop {
             let consumed = parser.parse(&self.buf[..self.buf_len])?;
@@ -98,7 +111,7 @@ impl<R: Read> RequestParser<R> {
         Ok(request_line)
     }
 
-    pub fn parse_headers(&mut self) -> Result<Headers, Error> {
+    fn parse_headers(&mut self) -> Result<Headers, ParseError> {
         let mut parser = HeadersParser::new();
         loop {
             let consumed = parser.parse(&self.buf[..self.buf_len])?;
@@ -116,12 +129,12 @@ impl<R: Read> RequestParser<R> {
         Ok(request_line)
     }
 
-    fn parse_body(&mut self, body_len: usize) -> Result<Vec<u8>, Error> {
+    fn parse_body(&mut self, body_len: usize) -> Result<Vec<u8>, ParseError> {
         while self.buf_len < body_len {
             let n = self.read_to_buf();
 
             if n == 0 {
-                return Err(Error::BodyShorterThanReported);
+                return Err(ParseError::BodyShorterThanReported);
             }
         }
 
@@ -131,7 +144,7 @@ impl<R: Read> RequestParser<R> {
 
 #[cfg(test)]
 pub mod tests {
-    use super::{Error, Request};
+    use super::{ParseError, Request};
     use crate::chunk_reader::ChunkReader;
 
     #[test]
@@ -165,6 +178,6 @@ pub mod tests {
         let request = Request::from_reader(&mut data);
         assert!(request.is_err());
         let error = request.unwrap_err();
-        assert_eq!(error, Error::BodyShorterThanReported);
+        assert_eq!(error, ParseError::BodyShorterThanReported);
     }
 }

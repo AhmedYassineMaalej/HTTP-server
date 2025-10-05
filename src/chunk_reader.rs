@@ -9,6 +9,7 @@ pub struct ChunkReader {
 }
 
 impl ChunkReader {
+    #[must_use]
     pub fn new(data: &str, chunk_size: usize) -> Self {
         Self {
             data: String::from(data),

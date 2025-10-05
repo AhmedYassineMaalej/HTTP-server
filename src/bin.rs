@@ -11,12 +11,24 @@ fn main() {
         return;
     };
 
-    server.serve(handler);
+    server.serve(handler).unwrap();
 }
 
 fn handler(writer: &mut ResponseWriter, request: Request) -> Result<(), HandlerError> {
-    writer.write_status_line(&StatusLine::from(StatusCode::Ok));
-    writer.write_headers(&Headers::get_default(0));
-    writer.write_chunked_body(b"Hello world");
+    dbg!(request);
+
+    writer
+        .write_status_line(&StatusLine::from(StatusCode::Ok))
+        .map_err(|_| HandlerError::IntervalServerError)?;
+
+    let headers = Headers::new();
+    writer
+        .write_headers(&headers)
+        .map_err(|_| HandlerError::IntervalServerError)?;
+
+    if let Err(_e) = writer.write_chunked_body(b"Hello world") {
+        return Err(HandlerError::IntervalServerError);
+    }
+
     Ok(())
 }
