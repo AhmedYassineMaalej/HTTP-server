@@ -15,18 +15,18 @@ fn main() {
 }
 
 fn handler(writer: &mut ResponseWriter, request: Request) -> Result<(), HandlerError> {
-    dbg!(request);
-
     writer
-        .write_status_line(&StatusLine::from(StatusCode::Ok))
+        .write_status_line(&StatusLine::from(StatusCode::PermanentRedirect))
         .map_err(|_| HandlerError::IntervalServerError)?;
 
-    let headers = Headers::new();
+    let mut headers = Headers::new();
+    headers.insert("Content-Type", String::from("text/html"));
+
     writer
         .write_headers(&headers)
         .map_err(|_| HandlerError::IntervalServerError)?;
 
-    if let Err(_e) = writer.write_chunked_body(b"Hello world") {
+    if let Err(_e) = writer.write_body(b"<h1>Hello world</h1>") {
         return Err(HandlerError::IntervalServerError);
     }
 

@@ -9,6 +9,7 @@ use crate::headers::Headers;
 #[derive(Debug, Clone, Copy)]
 pub enum StatusCode {
     Ok = 200,
+    PermanentRedirect = 308,
     BadRequest = 400,
     InternalServerError = 500,
 }
@@ -27,9 +28,10 @@ pub struct StatusLine {
 impl From<StatusCode> for StatusLine {
     fn from(code: StatusCode) -> Self {
         let message = match code {
-            StatusCode::Ok => "200 OK",
-            StatusCode::BadRequest => "400 Bad Request",
-            StatusCode::InternalServerError => "500 Internal Server Error",
+            StatusCode::Ok => "OK",
+            StatusCode::BadRequest => "Bad Request",
+            StatusCode::InternalServerError => "Internal Server Error",
+            StatusCode::PermanentRedirect => "Permanent Redirect",
         };
 
         Self {
