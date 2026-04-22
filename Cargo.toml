@@ -13,4 +13,5 @@ name = "http_server_bin"
 path = "src/bin.rs"
 
 [dependencies]
+chrono = "0.4.44"
 

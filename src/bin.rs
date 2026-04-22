@@ -7,26 +7,34 @@ use http_server::{
 
 fn main() {
     let Ok(server) = Server::new(8080) else {
-        println!("couldnt not create server at port");
+        println!("couldnt not create server at port 8080");
         return;
     };
+
+    server.serve()
 
     server.serve(handler).unwrap();
 }
 
-fn handler(writer: &mut ResponseWriter, request: Request) -> Result<(), HandlerError> {
+fn handler(writer: &mut ResponseWriter, _request: Request) -> Result<(), HandlerError> {
     writer
         .write_status_line(&StatusLine::from(StatusCode::PermanentRedirect))
         .map_err(|_| HandlerError::IntervalServerError)?;
 
     let mut headers = Headers::new();
-    headers.insert("Content-Type", String::from("text/html"));
+    headers.insert("Content-Type", String::from("application/text"));
 
     writer
         .write_headers(&headers)
         .map_err(|_| HandlerError::IntervalServerError)?;
 
-    if let Err(_e) = writer.write_body(b"<h1>Hello world</h1>") {
+    let date = chrono::Local::now();
+
+    if let Err(_e) = writer.write_body(
+        date.format("it is %Y-%m-%d %H:%M:%S")
+            .to_string()
+            .as_bytes(),
+    ) {
         return Err(HandlerError::IntervalServerError);
     }
 
