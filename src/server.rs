@@ -47,7 +47,7 @@ impl Server {
     /// see <https://doc.rust-lang.org/std/net/struct.TcpListener.html#method.bind>
     pub fn new(port: u16) -> Result<Self, io::Error> {
         Ok(Self {
-            listener: TcpListener::bind(("127.0.0.1", port))?,
+            listener: TcpListener::bind(("0.0.0.0", port))?,
         })
     }
 

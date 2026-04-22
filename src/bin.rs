@@ -11,8 +11,6 @@ fn main() {
         return;
     };
 
-    server.serve()
-
     server.serve(handler).unwrap();
 }
 
